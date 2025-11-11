@@ -1,56 +1,71 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
-generator client {
-  provider = "prisma-client-js"
-  // output   = "../generated/prisma"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
 model User {
-  id       String @id @default(uuid())
-  email    String @unique
-  password String
+  id           String    @id @default(uuid())
+  email        String    @unique
+  password     String
   username     String
-  full_name String
-  rooms     Room[]
-  chats Shape[]
-}
-
-model Shape {
-  id         Int      @id @default(autoincrement())
-  userId     String
-  user User @relation(fields: [userId], references: [id])
-  created_at DateTime @default(now())
-  roomId     Int 
-  room Room @relation(fields: [roomId], references: [id])
-  type    String
-  clientX  Int?
-  clientY Int?
-  height  Int?
-  width  Int?
-  radiusX Int?
-  radiusY Int?
-  fromX Int?
-  fromY Int?
-  toX Int?
-  toY Int?
-  points     Json?
+  adminOfRooms Room[]    @relation("RoomAdmin")  // Rooms this user admins
+  accesses     Access[]
+  content      Content[]
 }
 
 model Room {
-  id         Int      @id @default(autoincrement())
-  slug       String   @unique
-  created_at DateTime @default(now())
-  admin_id   String
-  admin      User     @relation(fields: [admin_id], references: [id])
-  chats Shape[]
+  id           String    @id @default(uuid())
+  slug         String    @unique
+  created_at   DateTime  @default(now())
+  content      Content[]
+  invite_link  String    @unique
+  is_protected Boolean   @default(false)
+  password     String?
+  admin_id     String    // Removed @unique - allows users to admin multiple rooms
+  admin        User      @relation("RoomAdmin", fields: [admin_id], references: [id])
+  accesses     Access[]
+}
+
+enum Role {
+  user
+  admin
+  moderator
+}
+
+model Access {
+  id        String  @id @default(uuid())
+  room_id   String
+  room      Room    @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  user_id   String
+  user      User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  role      Role    @default(user)
+  is_banned Boolean @default(false)
   
+  @@unique([user_id, room_id])
+}
+
+enum Shape {
+  ellipse
+  square
+  pencil
+  line
+  arrow
+  text
+}
+
+model Content {
+  id         String   @id @default(uuid())
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  created_at DateTime @default(now())
+  room_id    String
+  room       Room     @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  text       String?
+  type       Shape
+  clientX    Int?
+  clientY    Int?
+  height     Int?
+  width      Int?
+  radiusX    Int?
+  radiusY    Int?
+  fromX      Int?
+  fromY      Int?
+  toX        Int?
+  toY        Int?
+  points     Json?
 }
