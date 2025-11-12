@@ -3,28 +3,52 @@ import jwt, { decode, JwtPayload } from "jsonwebtoken";
 import "dotenv/config";
 import JWT_SECRET from "@repo/backend-common/config";
 import { prismaClient } from "@repo/db/client";
+import { uuid } from "uuidv4";
 const wss = new WebSocketServer({ port: 8080 });
+import z from "zod";
+type Role = "user" | "admin" | "moderator";
 
 interface User {
   userId: string;
   ws: WebSocket;
-  rooms: number[];
+  socketId: string;
+  roomId: number;
+  access: Record<number, Role>;
 }
 
-// [{
-//   userId : 1,
-//   ws : __,
-//   rooms : [1,2]
-// },
-//{
-//   userId : 2,
-//   ws : __,
-//   rooms : [1]
-// }]
+const ShapeSchema = z.enum([
+  "ellipse",
+  "square",
+  "pencil",
+  "line",
+  "arrow",
+  "text",
+]);
+const MessageSchema = z.object({
+  type: ShapeSchema,
+  userId: z.string(),
+  roomId: z.string(),
+  text: z.string().optional(),
+  clientX: z.number().optional(),
+  clientY: z.number().optional(),
+  height: z.number().optional(),
+  width: z.number().optional(),
+  radiusX: z.number().optional(),
+  radiusY: z.number().optional(),
+  fromX: z.number().optional(),
+  fromY: z.number().optional(),
+  toX: z.number().optional(),
+  toY: z.number().optional(),
+  points: z.object({}).optional(),
+  color: z.string(),
+});
+type Message = z.infer<typeof MessageSchema>;
+type Shape = z.infer<typeof ShapeSchema>;
 
-const users: User[] = [];
+const usersBySocket = new Map<string, User>();
+const socketByRoom = new Map<number, Set<string>>();
 
-function userDetails(token: string | null) {
+function decodeToken(token: string | null) {
   if (!token) {
     return null;
   }
@@ -43,57 +67,80 @@ function userDetails(token: string | null) {
 }
 
 wss.on("connection", (ws, request) => {
-  const url = request.url;
-  if (!url) {
+  const cookies = request.headers.cookie;
+  if (!cookies) {
+    console.log("No cookies found");
+    ws.close(1008, "Authentication Error");
     return;
   }
-  const queryParam = new URLSearchParams(url.split("?")[1]);
-  const user = userDetails(queryParam.get("token"));
-  console.log("queryParam : ", queryParam, " user : ", user);
-  if (!user) {
-    console.log("Working");
+  const cookieMap = new Map<string, string>();
+  cookies.split("; ").forEach((cookie) => {
+    const [key, value] = cookie.split("=");
+    cookieMap.set(key ?? "", value ?? "");
+  });
+
+  const decodedToken = decodeToken(cookieMap.get("authToken") ?? null);
+
+  console.log(
+    "cookie token : ",
+    cookieMap.get("authToken"),
+    " decodedToken : ",
+    decodedToken
+  );
+  if (!decodedToken) {
+    console.log("No token found");
     ws.close();
     return;
   }
-  users.push({
-    userId: (user as JwtPayload).userId,
-    ws,
-    rooms: [],
+  const { userId, roomId, access } = (decodedToken as JwtPayload).userId;
+  if (!userId || !roomId || !access) {
+    console.log("No userId, roomId or access found");
+    ws.close();
+    return;
+  }
+  const socketId = uuid();
+  socketByRoom.get(roomId)?.add(socketId);
+  usersBySocket.set(socketId, { userId, ws, socketId, roomId, access });
+
+  ws.on("message", async (msg: Buffer) => {
+    const toParseMessage = msg.toString();
+    const message = JSON.parse(toParseMessage);
+
+    const { type, ...rest } = message;
+    const validateType = ShapeSchema.parse(type);
+    if (!validateType) {
+      console.log("Invalid type");
+      return;
+    }
+    const validatedMessage = MessageSchema.parse({
+      type: validateType,
+      ...rest,
+      userId,
+      roomId,
+    });
+    if (!validatedMessage) {
+      console.log("Invalid message");
+      return;
+    }
+    sendMessageToRoom(roomId, validatedMessage, userId);
+    await prismaClient.content.create({
+      data: {
+        ...validatedMessage,
+      },
+    });
+    console.log("websocket server listening at 8080 port ");
   });
+});
 
-  ws.on("message", async (toParseMessage) => {
-    const message = JSON.parse(toParseMessage as unknown as string);
-
-    if (message.type === "join_room") {
-      const user = users.find((user) => user.ws === ws);
-      user?.rooms.push(message.roomId);
-    } else if (message.type === "leave_room") {
-      const user = users.find((user) => user.ws === ws);
-      if (!user) {
-        return;
-      }
-      user.rooms = user?.rooms.filter((room) => room !== message.roomId);
-    } else if (message.type === "chat") {
-      await prismaClient.chat.create({
-        data: {
-          roomId: Number(message.roomId),
-          message: message.message,
-          userId: (user as JwtPayload).userId,
-        },
-      });
-
-      users.forEach((user) => {
-        if (user.rooms.includes(message.roomId)) {
-          user.ws.send(
-            JSON.stringify({
-              type: "chat",
-              message: message.message,
-              roomId: message.roomId,
-            })
-          );
-        }
-      });
+function sendMessageToRoom(roomId: number, message: any, userId: string) {
+  const sockets = socketByRoom.get(roomId);
+  if (!sockets) {
+    return;
+  }
+  sockets.forEach((socketId) => {
+    const user = usersBySocket.get(socketId);
+    if (user && user.userId !== userId && !!user.access[roomId]) {
+      user.ws.send(JSON.stringify(message));
     }
   });
-  console.log("websocket server listening at 8080 port ");
-});
+}
