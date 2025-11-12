@@ -1,9 +1,25 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 model User {
   id           String    @id @default(uuid())
   email        String    @unique
   password     String
   username     String
-  adminOfRooms Room[]    @relation("RoomAdmin")  // Rooms this user admins
+  adminOfRooms Room[]    @relation("RoomAdmin") // Rooms this user admins
   accesses     Access[]
   content      Content[]
 }
@@ -11,14 +27,15 @@ model User {
 model Room {
   id           String    @id @default(uuid())
   slug         String    @unique
-  created_at   DateTime  @default(now())
+  createdAt   DateTime  @default(now()) @map("created_at")
   content      Content[]
-  invite_link  String    @unique
-  is_protected Boolean   @default(false)
+  inviteLink  String    @unique @map("invite_link")
+  isProtected Boolean   @default(false) @map("is_protected")
   password     String?
-  admin_id     String    // Removed @unique - allows users to admin multiple rooms
-  admin        User      @relation("RoomAdmin", fields: [admin_id], references: [id])
+  adminId     String    @map("admin_id") // Removed @unique - allows users to admin multiple rooms
+  admin        User      @relation("RoomAdmin", fields: [adminId], references: [id])
   accesses     Access[]
+  name         String 
 }
 
 enum Role {
@@ -29,14 +46,14 @@ enum Role {
 
 model Access {
   id        String  @id @default(uuid())
-  room_id   String
-  room      Room    @relation(fields: [room_id], references: [id], onDelete: Cascade)
-  user_id   String
-  user      User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  roomId   String @map("room_id")
+  room      Room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId   String @map("user_id")
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   role      Role    @default(user)
-  is_banned Boolean @default(false)
+  isBanned Boolean @default(false) @map("is_banned")
   
-  @@unique([user_id, room_id])
+  @@unique([userId, roomId])
 }
 
 enum Shape {
@@ -48,24 +65,25 @@ enum Shape {
   text
 }
 
-model Content {
-  id         String   @id @default(uuid())
-  user_id    String
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  created_at DateTime @default(now())
-  room_id    String
-  room       Room     @relation(fields: [room_id], references: [id], onDelete: Cascade)
-  text       String?
-  type       Shape
-  clientX    Int?
-  clientY    Int?
-  height     Int?
-  width      Int?
-  radiusX    Int?
-  radiusY    Int?
-  fromX      Int?
-  fromY      Int?
-  toX        Int?
-  toY        Int?
-  points     Json?
-}
+  model Content {
+    id         String   @id @default(uuid())
+    userId    String @map("user_id")
+    user       User     @relation(fields: [userId], references: [id], onDelete: Cascade) 
+    createdAt DateTime @default(now()) @map("created_at")
+    roomId    String @map("room_id")
+    room       Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+    text       String?
+    type       Shape
+    clientX    Int? @map("client_x")
+    clientY    Int? @map("client_y")
+    height     Int?
+    width      Int?
+    radiusX    Int? @map("radius_x")
+    radiusY    Int? @map("radius_y")
+    fromX      Int? @map("from_x")
+    fromY      Int? @map("from_y")
+    toX        Int? @map("to_x")
+    toY        Int? @map("to_y")
+    points     Json?
+    color      String?
+  }
