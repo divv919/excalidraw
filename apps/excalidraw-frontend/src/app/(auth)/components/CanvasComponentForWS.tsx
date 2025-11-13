@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import CanvasComponent from "./CanvasComponent";
-import { TOKEN, WEBSOCKET_URL } from "@/config/config";
+import { TOKEN, WEBSOCKET_URL } from "@/config/variables";
 
 function CanvasComponentForWS({
   existingShapes,

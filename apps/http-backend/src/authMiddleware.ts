@@ -3,12 +3,9 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import JWT_SECRET from "@repo/backend-common/config";
 
 const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  console.log("Headers are : " + req.headers["authorization"]);
+  console.log("cookies are : " + req.cookies.authToken);
 
-  const decoded = jwt.verify(
-    req.headers["authorization"]?.split(" ")[1] || "",
-    JWT_SECRET
-  );
+  const decoded = jwt.verify(req.cookies.authToken || "", JWT_SECRET);
   console.log("Is decoded : ", !!decoded, " Decode value : ", decoded);
 
   if (decoded) {
@@ -16,5 +13,7 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
     next();
     return;
   }
+  res.status(401).json({ success: false, message: "Unauthorized" });
+  return;
 };
 export default authMiddleware;

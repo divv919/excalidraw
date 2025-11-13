@@ -1,5 +1,5 @@
-import CanvasComponent from "@/components/CanvasComponentForWS";
-import { BACKEND_BASE_URL } from "@/config/config";
+import CanvasComponent from "@/app/(auth)/components/CanvasComponentForWS";
+import { BACKEND_BASE_URL } from "@/config/variables";
 import axios from "axios";
 
 type Shape = {

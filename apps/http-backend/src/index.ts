@@ -39,7 +39,17 @@ app.post("/signup", async (req, res) => {
   const token = jwt.sign({ userId: userId.id }, JWT_SECRET);
   res
     .status(200)
-    .json({ success: true, message: "User created successfully", token });
+    .json({
+      success: true,
+      message: "User created successfully",
+      user: { email, username },
+    })
+    .cookie("authToken", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 30,
+      sameSite: "strict",
+    });
 });
 
 app.post("/signin", async (req, res) => {
@@ -63,7 +73,21 @@ app.post("/signin", async (req, res) => {
   const token = jwt.sign({ userId: id }, JWT_SECRET);
   res
     .status(200)
-    .json({ success: true, message: "Logged in successfully", token });
+    .json({
+      success: true,
+      message: "Logged in successfully",
+
+      user: {
+        email: userExists.email,
+        username: userExists.username,
+      },
+    })
+    .cookie("authToken", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 30,
+      sameSite: "strict",
+    });
 });
 
 app.post("/createRoom", authMiddleware, async (req, res) => {
