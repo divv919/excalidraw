@@ -42,8 +42,6 @@ const MessageSchema = z.object({
   points: z.object({}).optional(),
   color: z.string(),
 });
-type Message = z.infer<typeof MessageSchema>;
-type Shape = z.infer<typeof ShapeSchema>;
 
 const usersBySocket = new Map<string, User>();
 const socketByRoom = new Map<number, Set<string>>();
@@ -52,7 +50,6 @@ function decodeToken(token: string | null) {
   if (!token) {
     return null;
   }
-  console.log("Token ", token);
   try {
     const decoded = jwt.verify(token, JWT_SECRET || "Fallback_Secret");
     if (!decoded) {
@@ -80,12 +77,6 @@ wss.on("connection", (ws, request) => {
   });
   const decodedToken = decodeToken(cookieMap.get("roomToken") ?? null);
 
-  // console.log(
-  //   "cookie token : ",
-  //   cookieMap.get("roomToken"),
-  //   " decodedToken : ",
-  //   decodedToken
-  // );
   if (!decodedToken) {
     console.log("No token found");
     ws.close();
@@ -98,50 +89,84 @@ wss.on("connection", (ws, request) => {
     return;
   }
   const socketId = uuid();
-  socketByRoom.get(roomId)?.add(socketId);
+  const roomExists = socketByRoom.get(roomId);
+  if (!roomExists) {
+    socketByRoom.set(roomId, new Set([socketId]));
+  } else {
+    roomExists.add(socketId);
+  }
   usersBySocket.set(socketId, { userId, ws, socketId, roomId, access });
+  console.log({ usersBySocket });
+  console.log(usersBySocket.size);
+  console.log(socketByRoom);
 
   ws.on("message", async (msg: Buffer) => {
-    console.log("message received : ", msg.toString());
     const toParseMessage = msg.toString();
     const message = JSON.parse(toParseMessage);
 
-    console.log("message : ", message);
+    console.log("message : ", message, typeof message);
     const { type, ...rest } = message;
-    const validateType = ShapeSchema.parse(type);
-    if (!validateType) {
-      console.log("Invalid type");
+    const validateType = ShapeSchema.safeParse(type);
+    if (!validateType.success) {
+      console.log("Invalid shape type", validateType.error);
       return;
     }
-    const validatedMessage = MessageSchema.parse({
+    const validatedMessage = MessageSchema.safeParse({
       type,
       ...rest,
       userId,
       roomId,
     });
-    if (!validatedMessage) {
-      console.log("Invalid message");
+    if (!validatedMessage.success) {
+      console.log("Invalid message", validatedMessage.error);
       return;
     }
-    sendMessageToRoom(roomId, validatedMessage, userId);
+    sendMessageToRoom(roomId, validatedMessage, userId, socketId);
     await prismaClient.content.create({
       data: {
-        ...validatedMessage,
+        ...validatedMessage.data,
       },
     });
-    console.log("websocket server listening at 8080 port ");
+  });
+  ws.on("close", () => {
+    usersBySocket.delete(socketId);
+    const lastInRoom = socketByRoom.get(roomId);
+    if (!lastInRoom) {
+      console.error("Room is already empty");
+      return;
+    }
+    if (lastInRoom?.size > 1) {
+      lastInRoom?.delete(socketId);
+    } else {
+      socketByRoom.delete(roomId);
+    }
+
+    console.log("user id is closed ", userId);
+    console.log({ usersBySocket });
   });
 });
 
-function sendMessageToRoom(roomId: number, message: any, userId: string) {
+function sendMessageToRoom(
+  roomId: number,
+  message: any,
+  userId: string,
+  socketIdOfSender: string
+) {
   const sockets = socketByRoom.get(roomId);
+  console.log("messages to be sent to these sockets", sockets);
   if (!sockets) {
+    console.log("no sockets found , returnign");
     return;
   }
   sockets.forEach((socketId) => {
+    console.log("sending message to", usersBySocket.get(socketId)?.userId);
     const user = usersBySocket.get(socketId);
-    if (user && user.userId !== userId && !!user.access[roomId]) {
+    console.log({ user });
+    console.log("user sneding is", userId, " To send to is ", user?.userId);
+    console.log("access", user?.access);
+    if (user && user.userId !== userId && !!user.access) {
       user.ws.send(JSON.stringify(message));
     }
   });
 }
+console.log("websocket server listening at 8080 port ");

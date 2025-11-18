@@ -4,7 +4,11 @@ import jwt from "jsonwebtoken";
 import "dotenv/config";
 import authMiddleware from "./authMiddleware";
 import JWT_SECRET from "@repo/backend-common/config";
-import { CreateRoomSchema, SignInSchema, UserSchema } from "@repo/common/types";
+import {
+  CreateRoomSchema,
+  SignInSchema,
+  UserSchema,
+} from "@repo/common/schema";
 import { prismaClient } from "@repo/db/client";
 import { generateSlug } from "./lib/util";
 import cors from "cors";
@@ -86,7 +90,6 @@ app.post("/signin", async (req, res) => {
   const token = jwt.sign({ userId: id }, JWT_SECRET);
   res
     .status(200)
-
     .cookie("authToken", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

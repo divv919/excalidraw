@@ -1,0 +1,37 @@
+"use client";
+const availableColors = ["white", "red", "green", "blue", "yellow"];
+export default function CanvasSidebar({
+  currentColor,
+  setCurrentColor,
+}: {
+  currentColor: CanvasRenderingContext2D["strokeStyle"];
+  setCurrentColor: (color: CanvasRenderingContext2D["strokeStyle"]) => void;
+}) {
+  return (
+    <div className="absolute flex flex-col gap-3 shadow-2xl top-0  rounded-lg bg-neutral-900 m-4 p-4">
+      <div className=" font-medium text-sm text-neutral-400 uppercase ">
+        Stroke Color
+      </div>
+      <div className="flex gap-1">
+        {availableColors.map((color, index) => {
+          return (
+            <div
+              key={index}
+              className={`rounded-md ${currentColor === color ? "border border-blue-500" : ""}`}
+            >
+              <div
+                className="h-fit w-fit"
+                onClick={() => setCurrentColor(color)}
+              >
+                <div
+                  className={`size-7 m-1   rounded-md `}
+                  style={{ backgroundColor: color }}
+                ></div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

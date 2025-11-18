@@ -20,5 +20,5 @@ export type Content = {
   toX?: number;
   toY?: number;
   points?: Json;
-  color?: string;
+  color: CanvasRenderingContext2D["strokeStyle"];
 };

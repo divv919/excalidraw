@@ -11,7 +11,7 @@ function CanvasComponentForWS({ slug }: { slug: string }) {
     null
   );
   const [existingShapes, setExistingShapes] = useState<Content[]>([]);
-
+  const [messagesLoaded, setMessagesLoaded] = useState(false);
   useEffect(() => {
     console.log("slug : ", slug);
     async function getPreviousMessages() {
@@ -24,6 +24,7 @@ function CanvasComponentForWS({ slug }: { slug: string }) {
       });
       if (response.success) {
         setExistingShapes(response.messages);
+        setMessagesLoaded(true);
       } else {
         console.log("Error getting previous messages : ", response);
       }
@@ -31,17 +32,30 @@ function CanvasComponentForWS({ slug }: { slug: string }) {
     getPreviousMessages();
   }, [slug]);
 
+  //for test
   useEffect(() => {
+    console.log({ existingShapes });
+  }, [existingShapes]);
+
+  useEffect(() => {
+    if (!messagesLoaded) {
+      return;
+    }
     const socket = new WebSocket(`${WEBSOCKET_URL}`);
     socket.onopen = () => {
       setSocketConnection(socket);
     };
     socket.onmessage = (e: MessageEvent) => {
-      const parsed = JSON.parse(e.data) as { message: Content };
-      setExistingShapes((prev) => [...prev, parsed.message]);
+      const parsed = JSON.parse(e.data) as { data: Content };
+      console.log({ parsed });
+      setExistingShapes((prev) => [...prev, parsed.data]);
     };
-  }, [existingShapes]);
+    return () => socket.close();
+  }, [messagesLoaded]);
 
+  if (!messagesLoaded) {
+    return <div>Loading canvas</div>;
+  }
   if (!socketConnection) {
     return <div>Connecting to ws</div>;
   }

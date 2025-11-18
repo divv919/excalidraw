@@ -1,5 +1,6 @@
 "use client";
 
+import CanvasSidebar from "@/app/components/CanvasSidebar";
 import createCanvas from "@/app/lib/draw";
 import { Content } from "@/types/canvas";
 import { useState, useRef, useEffect } from "react";
@@ -37,14 +38,14 @@ const CanvasComponent = ({
     }
     canvas.clearCanvas();
     existingShapes.map((shape: Content) => {
-      const { clientX, clientY, height, width } = shape;
+      console.log({ shape });
 
       canvas.drawRect(
-        clientX ?? 0,
-        clientY ?? 0,
-        width ?? 0,
-        height ?? 0,
-        currentColor
+        shape.clientX ?? 0,
+        shape.clientY ?? 0,
+        shape.width ?? 0,
+        shape.height ?? 0,
+        shape.color
       );
     });
   }, [existingShapes, canvas]);
@@ -62,7 +63,7 @@ const CanvasComponent = ({
         clientY ?? 0,
         width ?? 0,
         height ?? 0,
-        currentColor
+        shapeAsString.color
       );
     });
     const height = e.clientY - startXY.clientY;
@@ -82,9 +83,11 @@ const CanvasComponent = ({
     const { clientX, clientY } = e;
     const height = clientY - startXY.clientY;
     const width = clientX - startXY.clientX;
+
     setExistingShapes((prev) => [
       ...prev,
       {
+        color: currentColor,
         type: currentShape,
         height,
         width,
@@ -94,6 +97,7 @@ const CanvasComponent = ({
     ]);
     socket.send(
       JSON.stringify({
+        color: currentColor,
         type: currentShape,
         height,
         width,
@@ -116,6 +120,10 @@ const CanvasComponent = ({
         width={innerWidth}
         height={innerHeight}
         onMouseUp={handleMouseUp}
+      />
+      <CanvasSidebar
+        setCurrentColor={setCurrentColor}
+        currentColor={currentColor}
       />
     </div>
   );
