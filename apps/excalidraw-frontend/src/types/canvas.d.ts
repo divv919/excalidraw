@@ -4,21 +4,16 @@ export type Shape =
   | "pencil"
   | "line"
   | "arrow"
-  | "text";
+  | "text"
+  | "hand";
 
 export type Content = {
   type: Shape;
   text?: string;
-  clientX?: number;
-  clientY?: number;
-  height?: number;
-  width?: number;
-  radiusX?: number;
-  radiusY?: number;
-  fromX?: number;
-  fromY?: number;
-  toX?: number;
-  toY?: number;
+  startX?: number;
+  startY?: number;
+  endX?: number;
+  endY?: number;
   points?: Json;
   color: CanvasRenderingContext2D["strokeStyle"];
 };

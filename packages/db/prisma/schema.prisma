@@ -11,7 +11,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url  = env("DATABASE_URL")
 }
 
 model User {
@@ -73,16 +73,10 @@ enum Shape {
     room       Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
     text       String?
     type       Shape
-    clientX    Int? @map("client_x")
-    clientY    Int? @map("client_y")
-    height     Int?
-    width      Int?
-    radiusX    Int? @map("radius_x")
-    radiusY    Int? @map("radius_y")
-    fromX      Int? @map("from_x")
-    fromY      Int? @map("from_y")
-    toX        Int? @map("to_x")
-    toY        Int? @map("to_y")
-    points     Json?
+    startX    Int? @map("start_x")
+    startY    Int? @map("start_y")
+    endX      Int? @map("end_x")
+    endY      Int? @map("end_y")
+    points     Json[]
     color      String?
   }

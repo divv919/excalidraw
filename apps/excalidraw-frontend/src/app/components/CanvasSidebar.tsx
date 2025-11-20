@@ -8,7 +8,7 @@ export default function CanvasSidebar({
   setCurrentColor: (color: CanvasRenderingContext2D["strokeStyle"]) => void;
 }) {
   return (
-    <div className="absolute flex flex-col gap-3 shadow-2xl top-0  rounded-lg bg-neutral-900 m-4 p-4">
+    <div className="absolute flex flex-col gap-3  top-0  rounded-lg bg-neutral-800 m-4 p-4">
       <div className=" font-medium text-sm text-neutral-400 uppercase ">
         Stroke Color
       </div>
@@ -24,7 +24,7 @@ export default function CanvasSidebar({
                 onClick={() => setCurrentColor(color)}
               >
                 <div
-                  className={`size-7 m-1   rounded-md `}
+                  className={`size-7 m-1  cursor-pointer rounded-md `}
                   style={{ backgroundColor: color }}
                 ></div>
               </div>

@@ -29,17 +29,11 @@ const MessageSchema = z.object({
   userId: z.string(),
   roomId: z.string(),
   text: z.string().optional(),
-  clientX: z.number().optional(),
-  clientY: z.number().optional(),
-  height: z.number().optional(),
-  width: z.number().optional(),
-  radiusX: z.number().optional(),
-  radiusY: z.number().optional(),
-  fromX: z.number().optional(),
-  fromY: z.number().optional(),
-  toX: z.number().optional(),
-  toY: z.number().optional(),
-  points: z.object({}).optional(),
+  startX: z.number().optional(),
+  startY: z.number().optional(),
+  endX: z.number().optional(),
+  endY: z.number().optional(),
+  points: z.array(z.object({ x: z.number(), y: z.number() })).optional(),
   color: z.string(),
 });
 
@@ -122,11 +116,17 @@ wss.on("connection", (ws, request) => {
       return;
     }
     sendMessageToRoom(roomId, validatedMessage, userId, socketId);
-    await prismaClient.content.create({
+    console.log("about to store dat in db");
+    console.log({
+      validatedMessage: validatedMessage.data,
+    });
+    const response = await prismaClient.content.create({
       data: {
         ...validatedMessage.data,
       },
     });
+    console.log("response of db store");
+    console.log({ response });
   });
   ws.on("close", () => {
     usersBySocket.delete(socketId);
